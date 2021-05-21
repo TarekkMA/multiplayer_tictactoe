@@ -1,4 +1,3 @@
-import PySide6
 from game_state import GameState, TileState
 from typing import Callable, List
 from PySide6 import QtGui, QtWidgets
@@ -7,8 +6,10 @@ from PySide6.QtWidgets import (
 import sys
 from PySide6.QtCore import Qt
 from enum import Enum
+from network import Connection
+from tile_state import TileState
 
-GAME_SZIE = 3
+GAME_SZIE = 5
 
 class GameWindow(QtWidgets.QWidget):
 
@@ -16,15 +17,26 @@ class GameWindow(QtWidgets.QWidget):
   label: QLabel
   game_state: GameState
 
-  def __init__(self):
+  def __init__(self, is_server: bool):
     super().__init__()
+    self.is_server = is_server
     self.game_state = GameState(GAME_SZIE, self._refresh_ui)
     self._init_window()
     self._init_ui()
+    self.game_state.setup_multiplayer_connection(is_server)
 
   def _init_window(self):
     self.resize(800, 800)
-    self.setWindowTitle("Multiplayer Tic Tac Teo")
+
+    if self.is_server == None:
+      postfix = "single player"
+    else:
+      if self.is_server:
+        postfix = "multi player (server)"
+      else:
+        postfix = "multi player (client)"
+
+    self.setWindowTitle(f"Multiplayer Tic Tac Teo - {postfix}")
     self.show()
 
   def _init_ui(self):
@@ -73,13 +85,18 @@ class GameWindow(QtWidgets.QWidget):
 
   def get_tile_clicked_listener(self, button: QPushButton, x: int, y: int):
     def click_action():
-      self.game_state.set(x, y, self.game_state.turn)
+      if self.game_state.user_tile_type == self.game_state.turn:
+        self.game_state.set(x, y, self.game_state.user_tile_type)
     return click_action
 
 
 if __name__ == "__main__":
+  is_server = None
+  if len(sys.argv) == 2:
+    is_server = sys.argv[1] == "server"
+
   app = QtWidgets.QApplication(sys.argv)
 
-  window = GameWindow()
+  window = GameWindow(is_server)
 
   sys.exit(app.exec())
